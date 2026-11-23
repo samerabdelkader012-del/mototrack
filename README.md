@@ -5,7 +5,7 @@
 
 ## النشر على GitHub Pages
 1. أنشئ Repository جديد (مثلاً `mototrack`) وخليه **Public**.
-2. اضغط **Add file ← Upload files** وارفع كل محتويات المجلد (`index.html` و`style.css` و`app.js` و`sw.js` و`manifest.webmanifest` ومجلد `icons`).
+2. اضغط **Add file ← Upload files** وارفع كل محتويات المجلد (كل الملفات في المستوى الأول من غير مجلدات: `index.html` و`style.css` و`app.js` و`sw.js` و`manifest.webmanifest` وملفات الصور `.png`).
 3. اضغط **Commit changes**.
 4. ادخل **Settings ← Pages**، وتحت **Branch** اختار `main` و`/ (root)` واضغط **Save**.
 5. بعد دقيقة تلات هيظهر الرابط: `https://USERNAME.github.io/mototrack/`
