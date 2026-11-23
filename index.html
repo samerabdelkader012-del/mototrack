@@ -27,6 +27,18 @@
   </div>
 
   <div id="opts" class="panel" hidden>
+    <div class="vbox">
+      <div class="lbl">اسم المركبة الحالية</div>
+      <div class="vrow"><input id="vname" maxlength="30" aria-label="اسم المركبة"><button class="add" data-a="vrename">حفظ</button></div>
+      <div class="lbl">إضافة مركبة جديدة</div>
+      <div class="vrow">
+        <select id="vtype" aria-label="النوع"><option value="🏍️">🏍️ موتوسيكل</option><option value="🛵">🛵 سكوتر</option><option value="🚗">🚗 سيارة</option><option value="🚙">🚙 ميني فان</option><option value="🚚">🚚 عربية نقل</option></select>
+        <input id="vnew" placeholder="الاسم (اختياري)" maxlength="30" aria-label="اسم المركبة الجديدة">
+        <button class="add" data-a="vadd">إضافة</button>
+      </div>
+      <button class="back" data-a="vdel">🗑️ حذف المركبة الحالية</button>
+      <hr class="sep">
+    </div>
     <div class="tabs">
       <button id="th-auto" data-a="theme" data-v="auto">تلقائي</button>
       <button id="th-light" data-a="theme" data-v="light">☀️ نهاري</button>
@@ -35,6 +47,8 @@
     <label class="add pick">🖼️ اختيار خلفية<input type="file" accept="image/*" hidden data-c="bg"></label>
     <button class="back" data-a="clearbg">إزالة الخلفية</button>
   </div>
+
+  <div id="vbar" class="vbar"></div>
 
   <div class="tabs">
     <button id="tw" class="on" data-a="per" data-v="w">الأسبوع</button>

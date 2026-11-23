@@ -13,15 +13,29 @@ function write(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return 
 function readRaw(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
 function writeRaw(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); return true; } catch (e) { return false; } }
 
-var exp = read(KEY.exp, []), km = read(KEY.km, []), hid = read(KEY.hid, []);
-if (!Array.isArray(exp)) exp = [];
-if (!Array.isArray(km)) km = [];
-if (!Array.isArray(hid)) hid = [];
-exp.forEach(function (x) { if (NAMES.indexOf(x.cat) < 0) x.cat = 'أخرى'; });
+/* المركبات: كل مركبة ليها بياناتها لوحدها. المركبة الأولى بتستخدم المفاتيح القديمة عشان بياناتك ما تضيعش */
+var BASE = {exp: KEY.exp, km: KEY.km, hid: KEY.hid, ppl: KEY.ppl};
+var VKEY = 'moto-vehicles-v1', VCUR = 'moto-vcur-v1';
+var vehicles = read(VKEY, null);
+if (!Array.isArray(vehicles) || !vehicles.length) vehicles = [{id: 'v1', name: 'الموتوسيكل', icon: '🏍️'}];
+var vid = readRaw(VCUR, vehicles[0].id);
+if (!vehicles.some(function (v) { return v.id === vid; })) vid = vehicles[0].id;
+var exp = [], km = [], hid = [], ppl = 0, tripsCache = null;
+function curV() { return vehicles.filter(function (v) { return v.id === vid; })[0]; }
+function loadVehicle() {
+  ['exp', 'km', 'hid', 'ppl'].forEach(function (k) { KEY[k] = vid === 'v1' ? BASE[k] : BASE[k] + '-' + vid; });
+  exp = read(KEY.exp, []); km = read(KEY.km, []); hid = read(KEY.hid, []);
+  if (!Array.isArray(exp)) exp = [];
+  if (!Array.isArray(km)) km = [];
+  if (!Array.isArray(hid)) hid = [];
+  exp.forEach(function (x) { if (NAMES.indexOf(x.cat) < 0) x.cat = 'أخرى'; });
+  ppl = parseFloat(readRaw(KEY.ppl, '')) || 0; /* آخر سعر لتر بنزين */
+  tripsCache = null;
+}
 
 var theme = readRaw(KEY.theme, 'auto'), bg = readRaw(KEY.bg, '');
-var ppl = parseFloat(readRaw(KEY.ppl, '')) || 0; /* آخر سعر لتر بنزين */
-var per = 'w', cur = null, editing = false, tripsCache = null;
+var per = 'w', cur = null, editing = false;
+loadVehicle();
 
 /* ---------- أدوات مساعدة ---------- */
 var ESC = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
@@ -71,12 +85,15 @@ function renderHome() {
     if (x.l) lit[x.cat] = (lit[x.cat] || 0) + x.l;
   });
   var k = kmIn(r);
-  $('plabel').textContent = 'إجمالي ' + PERIOD[per];
+  $('plabel').textContent = 'إجمالي ' + PERIOD[per] + ' • ' + curV().name;
   $('sum').textContent = fmt(tot) + ' جنيه';
   $('cpk').textContent = k > 0 ? 'تكلفة الكيلو: ' + fmt(tot / k) + ' جنيه • المسافة: ' + fmt(k) + ' كم' : '';
   var html = card('km', '🛣️', 'المسافة', fmt(k) + ' كم', 'سجّل قراءة العداد وهنحسب المسافة', true);
-  CATS.forEach(function (c) { html += card(c[0], c[1], c[0], fmt(sums[c[0]] || 0) + ' جنيه', (cnt[c[0]] || 0) + ' عملية' + (lit[c[0]] ? ' • ' + fmt(lit[c[0]]) + ' لتر' : '')); });
+  CATS.forEach(function (c) { html += card(c[0], c[1], c[0], fmt(sums[c[0]] || 0) + ' جنيه', (cnt[c[0]] || 0) + ' عملية' + (lit[c[0]] ? ' • ' + fmt(lit[c[0]]) + ' لتر' : '') + (c[0] === 'بنزين' && lit[c[0]] > 0 && k > 0 ? ' • ' + fmt(k / lit[c[0]]) + ' كم/لتر' : '')); });
   if (editing) html += '<small class="note">الإخفاء بيشيل الكارت من الرئيسية بس، والبيانات محفوظة.</small>';
+  $('vbar').innerHTML = vehicles.map(function (v) {
+    return '<button class="chip' + (v.id === vid ? ' on' : '') + '" data-a="vsel" data-v="' + esc(v.id) + '">' + v.icon + ' ' + esc(v.name) + '</button>';
+  }).join('') + '<button class="chip" data-a="vplus">＋ مركبة</button>';
   $('grid').innerHTML = html;
   ['w', 'm', 'a'].forEach(function (p) { $('t' + p).classList.toggle('on', p === per); });
 }
@@ -88,8 +105,8 @@ function item(act, id, date, sub, amt) {
 }
 
 function renderDetail() {
-  var r = range(), isKm = cur === 'km', html = '', total = 0;
-  $('dtitle').textContent = isKm ? '🛣️ المسافة' : CATS[NAMES.indexOf(cur)][1] + ' ' + cur;
+  var r = range(), isKm = cur === 'km', html = '', total = 0, litP = 0;
+  $('dtitle').textContent = (isKm ? '🛣️ المسافة' : CATS[NAMES.indexOf(cur)][1] + ' ' + cur) + ' • ' + curV().name;
   $('amt').placeholder = isKm ? 'قراءة العداد الحالية (كم)' : 'المبلغ';
   $('note').hidden = isKm;
   var isFuel = cur === 'بنزين';
@@ -106,7 +123,7 @@ function renderDetail() {
     var rows = exp.filter(function (x) { return x.cat === cur; })
                   .sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id; });
     rows.forEach(function (x) {
-      if (inR(r, x.date)) total += x.amt;
+      if (inR(r, x.date)) { total += x.amt; litP += x.l || 0; }
       var parts = [];
       if (x.l) parts.push(fmt(x.l) + ' لتر × ' + fmt(x.p) + ' جنيه');
       if (x.note) parts.push(esc(x.note));
@@ -114,14 +131,17 @@ function renderDetail() {
     });
     if (!html) html = '<div class="empty">لا توجد مصاريف لـ' + esc(cur) + ' لسه</div>';
   }
-  $('dlabel').textContent = (isKm ? 'المسافة ' : 'إجمالي ') + PERIOD[per];
+  var lbl = (isKm ? 'المسافة ' : 'إجمالي ') + PERIOD[per], kk = isFuel ? kmIn(r) : 0;
+  if (isFuel && litP > 0 && kk > 0) lbl += ' • ' + fmt(litP) + ' لتر • ' + fmt(kk / litP) + ' كم/لتر (' + fmt(litP / kk * 100) + ' لتر/100كم)';
+  $('dlabel').textContent = lbl;
   $('dsum').textContent = fmt(total) + (isKm ? ' كم' : ' جنيه');
   $('list').innerHTML = html;
 }
 
 function render() { if (cur) renderDetail(); else renderHome(); }
 
-function show(c) {
+function show(c, pop) {
+  if (c && !pop) { try { history.pushState({c: c}, ''); } catch (e) {} }
   cur = c;
   $('home').hidden = !!c;
   $('detail').hidden = !c;
@@ -133,8 +153,35 @@ function show(c) {
 function toggleEdit() {
   editing = !editing;
   $('opts').hidden = !editing;
+  if (editing) $('vname').value = curV().name;
   $('editbtn').textContent = editing ? 'تم ✓' : '⚙️ تعديل';
   renderHome();
+}
+
+/* ---------- إدارة المركبات ---------- */
+function saveVehicles() { write(VKEY, vehicles); writeRaw(VCUR, vid); }
+function switchV(id) {
+  vid = id; loadVehicle(); saveVehicles();
+  $('vname').value = curV().name;
+  render();
+}
+function addV() {
+  var t = $('vtype'), name = $('vnew').value.trim() || t.options[t.selectedIndex].text.replace(/^\S+\s*/, '');
+  vehicles.push({id: 'v' + Date.now().toString(36), name: name, icon: t.value});
+  $('vnew').value = '';
+  switchV(vehicles[vehicles.length - 1].id);
+}
+function renameV() {
+  var n = $('vname').value.trim();
+  if (!n) return;
+  curV().name = n; saveVehicles(); render();
+}
+function delV() {
+  if (vehicles.length < 2) { alert('لازم تفضل مركبة واحدة على الأقل'); return; }
+  if (!confirm('هتتحذف "' + curV().name + '" وكل بياناتها. متأكد؟')) return;
+  ['exp', 'km', 'hid', 'ppl'].forEach(function (k) { writeRaw(KEY[k], ''); });
+  vehicles = vehicles.filter(function (v) { return v.id !== vid; });
+  switchV(vehicles[0].id);
 }
 
 /* ---------- الشكل: وضع نهاري/ليلي وخلفية ---------- */
@@ -176,9 +223,14 @@ document.addEventListener('click', function (e) {
   var a = t.dataset.a, v = t.dataset.v, id = +t.dataset.id;
   if (a === 'per') { per = v; render(); }
   else if (a === 'open') show(v);
-  else if (a === 'back') show(null);
+  else if (a === 'back') { if (history.state && history.state.c) history.back(); else show(null, true); }
   else if (a === 'edit') toggleEdit();
   else if (a === 'reload') location.reload();
+  else if (a === 'vsel') switchV(v);
+  else if (a === 'vplus') { if (!editing) toggleEdit(); $('opts').scrollIntoView(); $('vnew').focus(); }
+  else if (a === 'vadd') addV();
+  else if (a === 'vrename') renameV();
+  else if (a === 'vdel') delV();
   else if (a === 'theme') setTheme(v);
   else if (a === 'clearbg') setBg('');
   else if (a === 'del') { exp = exp.filter(function (x) { return x.id !== id; }); write(KEY.exp, exp); render(); }
@@ -229,6 +281,9 @@ $('form').addEventListener('input', function (e) {
     if (a > 0 && p > 0) $('ltr').value = fmt(a / p);
   }
 });
+
+/* زرار الرجوع في الموبايل بيرجّع للرئيسية */
+window.addEventListener('popstate', function (e) { show(e.state && e.state.c ? e.state.c : null, true); });
 
 /* ---------- تشغيل ---------- */
 applyLook();

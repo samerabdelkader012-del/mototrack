@@ -34,6 +34,15 @@ form{background:var(--surf);border:1px solid var(--line);border-radius:14px;padd
 input{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit}
 .card input{width:auto}
 .full{grid-column:1/-1}
+.vbar{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px}
+.chip{flex:none;border:1px solid var(--line);background:var(--surf);color:var(--ink);padding:7px 14px;border-radius:20px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--acc);color:var(--accInk);border-color:var(--acc)}
+.vrow{display:flex;gap:6px;margin:4px 0 10px}
+.vrow input{min-width:0;flex:1}
+.vrow .add{flex:none;padding:8px 14px}
+select{padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit}
+.vbox .back{color:var(--warn);margin:0}
+.sep{border:0;border-top:1px solid var(--line);margin:8px 0 12px}
 .fuel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .lbl{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--mute)}
 .add{grid-column:1/-1;border:0;background:var(--acc);color:var(--accInk);padding:11px;border-radius:10px;font:inherit;font-weight:700;cursor:pointer}

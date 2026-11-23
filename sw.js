@@ -1,5 +1,5 @@
 /* غيّر الرقم ده مع كل تحديث عشان النسخة الجديدة توصل للمستخدمين */
-const CACHE = 'mototrack-v4';
+const CACHE = 'mototrack-v6';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'favicon-32.png'];
 
