@@ -2,10 +2,10 @@
 'use strict';
 
 /* ---------- الإعدادات والبيانات ---------- */
-var KEY = {exp:'moto-expenses-v1', km:'moto-km-v1', hid:'moto-hidden-v1', theme:'moto-theme-v1', bg:'moto-bg-v1', ppl:'moto-fuelprice-v1'};
+var KEY = {exp:'moto-expenses-v1', km:'moto-km-v1', hid:'moto-hidden-v1', theme:'moto-theme-v1', bg:'moto-bg-v1', ppl:'moto-fuelprice-v1', inc:'moto-income-v1'};
 var CATS = [['بنزين','⛽'],['صيانة','🔧'],['كاوتش','🛞'],['زيت','🛢️'],['قطع غيار','⚙️'],['غسيل','🧼'],['ترخيص / تأمين','📄'],['أخرى','📦']];
 var NAMES = CATS.map(function (c) { return c[0]; });
-var PERIOD = {w:'هذا الأسبوع', m:'هذا الشهر', a:'كل المصاريف'};
+var PERIOD = {w:'هذا الأسبوع', m:'هذا الشهر', a:'كل الفترات'};
 
 function $(id) { return document.getElementById(id); }
 function read(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
@@ -14,17 +14,18 @@ function readRaw(k, d) { try { return localStorage.getItem(k) || d; } catch (e) 
 function writeRaw(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); return true; } catch (e) { return false; } }
 
 /* المركبات: كل مركبة ليها بياناتها لوحدها. المركبة الأولى بتستخدم المفاتيح القديمة عشان بياناتك ما تضيعش */
-var BASE = {exp: KEY.exp, km: KEY.km, hid: KEY.hid, ppl: KEY.ppl};
+var BASE = {exp: KEY.exp, km: KEY.km, hid: KEY.hid, ppl: KEY.ppl, inc: KEY.inc};
 var VKEY = 'moto-vehicles-v1', VCUR = 'moto-vcur-v1';
 var vehicles = read(VKEY, null);
 if (!Array.isArray(vehicles) || !vehicles.length) vehicles = [{id: 'v1', name: 'الموتوسيكل', icon: '🏍️'}];
 var vid = readRaw(VCUR, vehicles[0].id);
 if (!vehicles.some(function (v) { return v.id === vid; })) vid = vehicles[0].id;
-var exp = [], km = [], hid = [], ppl = 0, tripsCache = null;
+var exp = [], km = [], hid = [], inc = [], ppl = 0, tripsCache = null;
 function curV() { return vehicles.filter(function (v) { return v.id === vid; })[0]; }
 function loadVehicle() {
-  ['exp', 'km', 'hid', 'ppl'].forEach(function (k) { KEY[k] = vid === 'v1' ? BASE[k] : BASE[k] + '-' + vid; });
-  exp = read(KEY.exp, []); km = read(KEY.km, []); hid = read(KEY.hid, []);
+  ['exp', 'km', 'hid', 'ppl', 'inc'].forEach(function (k) { KEY[k] = vid === 'v1' ? BASE[k] : BASE[k] + '-' + vid; });
+  exp = read(KEY.exp, []); km = read(KEY.km, []); hid = read(KEY.hid, []); inc = read(KEY.inc, []);
+  if (!Array.isArray(inc)) inc = [];
   if (!Array.isArray(exp)) exp = [];
   if (!Array.isArray(km)) km = [];
   if (!Array.isArray(hid)) hid = [];
@@ -84,11 +85,14 @@ function renderHome() {
     tot += x.amt; sums[x.cat] = (sums[x.cat] || 0) + x.amt; cnt[x.cat] = (cnt[x.cat] || 0) + 1;
     if (x.l) lit[x.cat] = (lit[x.cat] || 0) + x.l;
   });
-  var k = kmIn(r);
-  $('plabel').textContent = 'إجمالي ' + PERIOD[per] + ' • ' + curV().name;
+  var k = kmIn(r), incTot = 0, incN = 0;
+  inc.forEach(function (x) { if (inR(r, x.date)) { incTot += x.amt; incN++; } });
+  $('plabel').textContent = 'مصاريف ' + PERIOD[per] + ' • ' + curV().name;
   $('sum').textContent = fmt(tot) + ' جنيه';
-  $('cpk').textContent = k > 0 ? 'تكلفة الكيلو: ' + fmt(tot / k) + ' جنيه • المسافة: ' + fmt(k) + ' كم' : '';
+  $('cpk').textContent = k > 0 ? 'تكلفة الكيلو: ' + fmt(tot / k) + ' جنيه' + (incTot > 0 ? ' • ربح الكيلو: ' + fmt((incTot - tot) / k) + ' جنيه' : '') + ' • المسافة: ' + fmt(k) + ' كم' : '';
+  $('pnl').textContent = incTot > 0 ? 'الدخل: ' + fmt(incTot) + ' جنيه • الصافي: ' + fmt(incTot - tot) + ' جنيه' : '';
   var html = card('km', '🛣️', 'المسافة', fmt(k) + ' كم', 'سجّل قراءة العداد وهنحسب المسافة', true);
+  html += card('inc', '💰', 'الدخل (نقل ذكي)', fmt(incTot) + ' جنيه', incN ? incN + ' عملية • الصافي: ' + fmt(incTot - tot) + ' جنيه' : 'سجّل دخل الرحلات وهنحسب الربح', true);
   CATS.forEach(function (c) { html += card(c[0], c[1], c[0], fmt(sums[c[0]] || 0) + ' جنيه', (cnt[c[0]] || 0) + ' عملية' + (lit[c[0]] ? ' • ' + fmt(lit[c[0]]) + ' لتر' : '') + (c[0] === 'بنزين' && lit[c[0]] > 0 && k > 0 ? ' • ' + fmt(k / lit[c[0]]) + ' كم/لتر' : '')); });
   if (editing) html += '<small class="note">الإخفاء بيشيل الكارت من الرئيسية بس، والبيانات محفوظة.</small>';
   $('vbar').innerHTML = vehicles.map(function (v) {
@@ -104,11 +108,33 @@ function item(act, id, date, sub, amt) {
     '<button data-a="' + act + '" data-id="' + id + '" aria-label="حذف">✕</button></div></div>';
 }
 
+function renderInc() {
+  var r = range(), tot = 0, n = 0, spend = 0, html = '';
+  $('dtitle').textContent = '💰 الدخل • ' + curV().name;
+  $('amt').placeholder = 'الدخل (جنيه)';
+  $('fuel').hidden = true; $('note').hidden = false; $('trips').hidden = false;
+  inc.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id; }).forEach(function (x) {
+    if (inR(r, x.date)) { tot += x.amt; n += x.t || 0; }
+    var parts = [];
+    if (x.t) parts.push(x.t + ' رحلة');
+    if (x.note) parts.push(esc(x.note));
+    html += item('delinc', x.id, x.date, parts.join(' • '), fmt(x.amt) + ' جنيه');
+  });
+  exp.forEach(function (x) { if (inR(r, x.date)) spend += x.amt; });
+  var lbl = 'الدخل ' + PERIOD[per] + ' • المصاريف: ' + fmt(spend) + ' • الصافي: ' + fmt(tot - spend) + ' جنيه';
+  if (n > 0) lbl += ' • متوسط الرحلة: ' + fmt(tot / n) + ' جنيه • تكلفة الرحلة: ' + fmt(spend / n) + ' جنيه';
+  $('dlabel').textContent = lbl;
+  $('dsum').textContent = fmt(tot) + ' جنيه';
+  $('list').innerHTML = html || '<div class="empty">سجّل أول دخل من الرحلات</div>';
+}
+
 function renderDetail() {
+  if (cur === 'inc') { renderInc(); return; }
   var r = range(), isKm = cur === 'km', html = '', total = 0, litP = 0;
   $('dtitle').textContent = (isKm ? '🛣️ المسافة' : CATS[NAMES.indexOf(cur)][1] + ' ' + cur) + ' • ' + curV().name;
   $('amt').placeholder = isKm ? 'قراءة العداد الحالية (كم)' : 'المبلغ';
   $('note').hidden = isKm;
+  $('trips').hidden = true;
   var isFuel = cur === 'بنزين';
   $('fuel').hidden = !isFuel;
   if (isFuel) $('ppl').value = ppl || '';
@@ -179,7 +205,7 @@ function renameV() {
 function delV() {
   if (vehicles.length < 2) { alert('لازم تفضل مركبة واحدة على الأقل'); return; }
   if (!confirm('هتتحذف "' + curV().name + '" وكل بياناتها. متأكد؟')) return;
-  ['exp', 'km', 'hid', 'ppl'].forEach(function (k) { writeRaw(KEY[k], ''); });
+  ['exp', 'km', 'hid', 'ppl', 'inc'].forEach(function (k) { writeRaw(KEY[k], ''); });
   vehicles = vehicles.filter(function (v) { return v.id !== vid; });
   switchV(vehicles[0].id);
 }
@@ -231,6 +257,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'vadd') addV();
   else if (a === 'vrename') renameV();
   else if (a === 'vdel') delV();
+  else if (a === 'delinc') { inc = inc.filter(function (x) { return x.id !== id; }); write(KEY.inc, inc); render(); }
   else if (a === 'theme') setTheme(v);
   else if (a === 'clearbg') setBg('');
   else if (a === 'del') { exp = exp.filter(function (x) { return x.id !== id; }); write(KEY.exp, exp); render(); }
@@ -254,6 +281,10 @@ $('form').addEventListener('submit', function (e) {
   var d = $('dt').value || today();
   if (cur === 'km') {
     km.push({id: Date.now(), odo: a, date: d}); tripsCache = null; write(KEY.km, km);
+  } else if (cur === 'inc') {
+    var t = parseInt($('trips').value, 10);
+    inc.push({id: Date.now(), amt: a, date: d, t: t > 0 ? t : 0, note: $('note').value.trim()}); write(KEY.inc, inc);
+    $('note').value = ''; $('trips').value = '';
   } else {
     var en = {id: Date.now(), cat: cur, amt: a, date: d, note: $('note').value.trim()};
     if (cur === 'بنزين') {
