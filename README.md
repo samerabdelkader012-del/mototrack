@@ -1,2 +1,25 @@
-# mototrack
-Motorcycle expenses calculation 
+# MotoTrack 🏍️
+
+تطبيق ويب بسيط لتسجيل مصاريف الموتوسيكل (بنزين، صيانة، كاوتش...) وحساب المسافة وتكلفة الكيلو.
+بيشتغل بدون إنترنت بعد أول فتح، وتقدر تضيفه على شاشة الموبايل.
+
+## النشر على GitHub Pages
+1. أنشئ Repository جديد (مثلاً `mototrack`) وخليه **Public**.
+2. اضغط **Add file ← Upload files** وارفع كل محتويات المجلد (`index.html` و`style.css` و`app.js` و`sw.js` و`manifest.webmanifest` ومجلد `icons`).
+3. اضغط **Commit changes**.
+4. ادخل **Settings ← Pages**، وتحت **Branch** اختار `main` و`/ (root)` واضغط **Save**.
+5. بعد دقيقة تلات هيظهر الرابط: `https://USERNAME.github.io/mototrack/`
+
+## إضافته على الموبايل
+- أندرويد (كروم): القائمة ⋮ ← **Add to Home screen**.
+- آيفون (سفاري): زرار المشاركة ← **Add to Home Screen**.
+
+## ملاحظات
+- البيانات بتتخزن في متصفح الجهاز فقط (localStorage).
+- لو عدّلت أي ملف بعد النشر، غيّر رقم `CACHE` في `sw.js` (مثلاً `mototrack-v2`) عشان التحديث يوصل للمستخدمين.
+
+## تحديث التطبيق بعد النشر (من غير مسح)
+1. افتح الـ Repository واضغط زرار `.` (نقطة) على الكيبورد، هيفتح محرر الكود. عدّل الملف واضغط **Commit**.
+   (أو ارفع الملف بنفس الاسم من **Add file ← Upload files** وهيستبدل القديم.)
+2. غيّر رقم `CACHE` في `sw.js` (`mototrack-v2` ← `mototrack-v3`...).
+3. بعد دقيقة، أي حد فاتح التطبيق هيظهرله شريط **"فيه نسخة جديدة — تحديث الآن"**.

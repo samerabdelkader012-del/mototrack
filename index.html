@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6f54">
+<meta name="description" content="MotoTrack - تطبيق لتسجيل مصاريف الموتوسيكل والمسافة">
+<title>MotoTrack - مصاريف الموتوسيكل</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MotoTrack">
+<script>try{var t=localStorage.getItem('moto-theme-v1');if(t&&t!=='auto')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="bg"></div>
+<div id="upd" class="upd" hidden><span>فيه نسخة جديدة من التطبيق</span><button data-a="reload">تحديث الآن</button></div>
+<main class="wrap">
+
+<section id="home">
+  <div class="top">
+    <h1><img class="logo" src="icons/icon-192.png" width="36" height="36" alt="">MotoTrack</h1>
+    <button id="editbtn" class="back" data-a="edit">⚙️ تعديل</button>
+  </div>
+
+  <div id="opts" class="panel" hidden>
+    <div class="tabs">
+      <button id="th-auto" data-a="theme" data-v="auto">تلقائي</button>
+      <button id="th-light" data-a="theme" data-v="light">☀️ نهاري</button>
+      <button id="th-dark" data-a="theme" data-v="dark">🌙 ليلي</button>
+    </div>
+    <label class="add pick">🖼️ اختيار خلفية<input type="file" accept="image/*" hidden data-c="bg"></label>
+    <button class="back" data-a="clearbg">إزالة الخلفية</button>
+  </div>
+
+  <div class="tabs">
+    <button id="tw" class="on" data-a="per" data-v="w">الأسبوع</button>
+    <button id="tm" data-a="per" data-v="m">الشهر</button>
+    <button id="ta" data-a="per" data-v="a">الكل</button>
+  </div>
+
+  <div class="total"><small id="plabel"></small><b id="sum">0 جنيه</b><small id="cpk"></small></div>
+  <div class="grid" id="grid"></div>
+</section>
+
+<section id="detail" hidden>
+  <button class="back" data-a="back">‹ رجوع</button>
+  <h1 id="dtitle"></h1>
+  <div class="total"><small id="dlabel"></small><b id="dsum"></b></div>
+  <form id="form">
+    <input id="amt" type="number" inputmode="decimal" min="0" step="any" placeholder="المبلغ" required aria-label="المبلغ">
+    <input id="dt" type="date" required aria-label="التاريخ">
+    <input id="note" class="full" placeholder="ملاحظة (اختياري)" aria-label="ملاحظة">
+    <button class="add" type="submit">حفظ</button>
+  </form>
+  <div class="list" id="list"></div>
+</section>
+
+</main>
+<script src="app.js" defer></script>
+</body>
+</html>
