@@ -2,7 +2,7 @@
 'use strict';
 
 /* ---------- الإعدادات والبيانات ---------- */
-var KEY = {exp:'moto-expenses-v1', km:'moto-km-v1', hid:'moto-hidden-v1', theme:'moto-theme-v1', bg:'moto-bg-v1'};
+var KEY = {exp:'moto-expenses-v1', km:'moto-km-v1', hid:'moto-hidden-v1', theme:'moto-theme-v1', bg:'moto-bg-v1', ppl:'moto-fuelprice-v1'};
 var CATS = [['بنزين','⛽'],['صيانة','🔧'],['كاوتش','🛞'],['زيت','🛢️'],['قطع غيار','⚙️'],['غسيل','🧼'],['ترخيص / تأمين','📄'],['أخرى','📦']];
 var NAMES = CATS.map(function (c) { return c[0]; });
 var PERIOD = {w:'هذا الأسبوع', m:'هذا الشهر', a:'كل المصاريف'};
@@ -20,6 +20,7 @@ if (!Array.isArray(hid)) hid = [];
 exp.forEach(function (x) { if (NAMES.indexOf(x.cat) < 0) x.cat = 'أخرى'; });
 
 var theme = readRaw(KEY.theme, 'auto'), bg = readRaw(KEY.bg, '');
+var ppl = parseFloat(readRaw(KEY.ppl, '')) || 0; /* آخر سعر لتر بنزين */
 var per = 'w', cur = null, editing = false, tripsCache = null;
 
 /* ---------- أدوات مساعدة ---------- */
@@ -63,17 +64,18 @@ function card(id, icon, name, amount, sub, wide) {
 }
 
 function renderHome() {
-  var r = range(), tot = 0, sums = {}, cnt = {};
+  var r = range(), tot = 0, sums = {}, cnt = {}, lit = {};
   exp.forEach(function (x) {
     if (!inR(r, x.date)) return;
     tot += x.amt; sums[x.cat] = (sums[x.cat] || 0) + x.amt; cnt[x.cat] = (cnt[x.cat] || 0) + 1;
+    if (x.l) lit[x.cat] = (lit[x.cat] || 0) + x.l;
   });
   var k = kmIn(r);
   $('plabel').textContent = 'إجمالي ' + PERIOD[per];
   $('sum').textContent = fmt(tot) + ' جنيه';
   $('cpk').textContent = k > 0 ? 'تكلفة الكيلو: ' + fmt(tot / k) + ' جنيه • المسافة: ' + fmt(k) + ' كم' : '';
   var html = card('km', '🛣️', 'المسافة', fmt(k) + ' كم', 'سجّل قراءة العداد وهنحسب المسافة', true);
-  CATS.forEach(function (c) { html += card(c[0], c[1], c[0], fmt(sums[c[0]] || 0) + ' جنيه', (cnt[c[0]] || 0) + ' عملية'); });
+  CATS.forEach(function (c) { html += card(c[0], c[1], c[0], fmt(sums[c[0]] || 0) + ' جنيه', (cnt[c[0]] || 0) + ' عملية' + (lit[c[0]] ? ' • ' + fmt(lit[c[0]]) + ' لتر' : '')); });
   if (editing) html += '<small class="note">الإخفاء بيشيل الكارت من الرئيسية بس، والبيانات محفوظة.</small>';
   $('grid').innerHTML = html;
   ['w', 'm', 'a'].forEach(function (p) { $('t' + p).classList.toggle('on', p === per); });
@@ -90,6 +92,9 @@ function renderDetail() {
   $('dtitle').textContent = isKm ? '🛣️ المسافة' : CATS[NAMES.indexOf(cur)][1] + ' ' + cur;
   $('amt').placeholder = isKm ? 'قراءة العداد الحالية (كم)' : 'المبلغ';
   $('note').hidden = isKm;
+  var isFuel = cur === 'بنزين';
+  $('fuel').hidden = !isFuel;
+  if (isFuel) $('ppl').value = ppl || '';
   if (isKm) {
     var t = trips();
     total = kmIn(r);
@@ -102,7 +107,10 @@ function renderDetail() {
                   .sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id; });
     rows.forEach(function (x) {
       if (inR(r, x.date)) total += x.amt;
-      html += item('del', x.id, x.date, esc(x.note || ''), fmt(x.amt) + ' جنيه');
+      var parts = [];
+      if (x.l) parts.push(fmt(x.l) + ' لتر × ' + fmt(x.p) + ' جنيه');
+      if (x.note) parts.push(esc(x.note));
+      html += item('del', x.id, x.date, parts.join(' • '), fmt(x.amt) + ' جنيه');
     });
     if (!html) html = '<div class="empty">لا توجد مصاريف لـ' + esc(cur) + ' لسه</div>';
   }
@@ -195,11 +203,31 @@ $('form').addEventListener('submit', function (e) {
   if (cur === 'km') {
     km.push({id: Date.now(), odo: a, date: d}); tripsCache = null; write(KEY.km, km);
   } else {
-    exp.push({id: Date.now(), cat: cur, amt: a, date: d, note: $('note').value.trim()}); write(KEY.exp, exp);
+    var en = {id: Date.now(), cat: cur, amt: a, date: d, note: $('note').value.trim()};
+    if (cur === 'بنزين') {
+      var l = parseFloat($('ltr').value), p = parseFloat($('ppl').value);
+      if (l > 0) en.l = l;
+      if (p > 0) en.p = p;
+    }
+    exp.push(en); write(KEY.exp, exp);
     $('note').value = '';
   }
-  $('amt').value = '';
+  $('amt').value = ''; $('ltr').value = '';
   render();
+});
+
+/* البنزين: المبلغ = السعر × اللترات، وتقدر تكتب المبلغ فيتحسب اللترات. وتغيير السعر بيتحفظ للمرة الجاية */
+$('form').addEventListener('input', function (e) {
+  if (cur !== 'بنزين') return;
+  var id = e.target.id, p = parseFloat($('ppl').value), l = parseFloat($('ltr').value), a = parseFloat($('amt').value);
+  if (id === 'ppl') {
+    ppl = p > 0 ? p : 0; writeRaw(KEY.ppl, ppl ? String(ppl) : '');
+    if (l > 0 && p > 0) $('amt').value = fmt(l * p);
+  } else if (id === 'ltr') {
+    if (l > 0 && p > 0) $('amt').value = fmt(l * p);
+  } else if (id === 'amt') {
+    if (a > 0 && p > 0) $('ltr').value = fmt(a / p);
+  }
 });
 
 /* ---------- تشغيل ---------- */

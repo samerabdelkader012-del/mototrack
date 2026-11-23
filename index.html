@@ -51,6 +51,10 @@
   <h1 id="dtitle"></h1>
   <div class="total"><small id="dlabel"></small><b id="dsum"></b></div>
   <form id="form">
+    <div id="fuel" class="fuel full" hidden>
+      <label class="lbl">سعر اللتر (جنيه)<input id="ppl" type="number" inputmode="decimal" min="0" step="any" placeholder="مثلاً 17.5"></label>
+      <label class="lbl">عدد اللترات<input id="ltr" type="number" inputmode="decimal" min="0" step="any" placeholder="مثلاً 5"></label>
+    </div>
     <input id="amt" type="number" inputmode="decimal" min="0" step="any" placeholder="المبلغ" required aria-label="المبلغ">
     <input id="dt" type="date" required aria-label="التاريخ">
     <input id="note" class="full" placeholder="ملاحظة (اختياري)" aria-label="ملاحظة">
